@@ -50,9 +50,6 @@ void setup()
 }
 
 void loop() {
- 
- delay(2000);
-
  // if(iterations == 2)//We check for updated weather forecast once every hour
  // {
    getWeatherData();
@@ -72,6 +69,7 @@ void loop() {
  iterations++;
  
  blinkLED();
+ delay(2000);
 }
 
 void connectToWifi()
