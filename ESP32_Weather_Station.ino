@@ -70,6 +70,13 @@ void initSensor()
     Serial.println("Could not find a valid BME280 sensor, check wiring!");
     while (1);
   }
+  initSnow();
+}
+
+void initSnow()
+{
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
 }
 
 float getSnowAcc()
