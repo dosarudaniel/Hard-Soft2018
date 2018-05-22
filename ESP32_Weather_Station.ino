@@ -5,11 +5,7 @@
 #include <WiFi.h>
 #include <math.h>
 
-const char* ssid     = "House MD";
-const char* password = "aspire2inspire";
-
 #define ALTITUDE 325.0 // Altitude in Suceava, Romania
-
 #define I2C_SDA 27
 #define I2C_SCL 26
 #define LED_PIN 2
@@ -18,7 +14,10 @@ const char* password = "aspire2inspire";
 #define trigPin 23
 #define echoPin 22
 
-#define MOUNT_DISTANCE 100.00 // in cm, max 400cm, min 5cm for snowAcc
+#define MOUNT_DISTANCE 14.50 // in cm, max 400cm, min 5cm for snowAcc
+
+const char* ssid     = "House MD";
+const char* password = "aspire2inspire";
 
 float temperature = 0;
 float humidity = 0;
