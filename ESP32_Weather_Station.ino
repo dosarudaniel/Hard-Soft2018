@@ -3,6 +3,7 @@
 #include "Adafruit_BME280.h" //https://github.com/Takatsuki0204/BME280-I2C-ESP32
 #include <ArduinoJson.h>    //https://github.com/bblanchon/ArduinoJson
 #include <WiFi.h>
+#include <math.h>
 
 const char* ssid     = "House MD";
 const char* password = "aspire2inspire";
@@ -14,9 +15,15 @@ const char* password = "aspire2inspire";
 #define LED_PIN 2
 #define BME280_ADDRESS 0x76  //If the sensor does not work, try the 0x77 address as well
 
+#define trigPin 23
+#define echoPin 22
+
+#define MOUNT_DISTANCE 100.00 // in cm, max 400cm, min 5cm for snowAcc
+
 float temperature = 0;
 float humidity = 0;
 float pressure = 0;
+float snowAcc = 0;
 int weatherID = 0;
 
 Adafruit_BME280 bme(I2C_SDA, I2C_SCL);
@@ -40,6 +47,7 @@ void loop() {
  getTemperature();
  getHumidity();
  getPressure();
+ getSnowAcc();
  getWeatherData(); // send data to server using GET
  delay(2000);      // change this to change "sample rate"
 }
@@ -62,6 +70,24 @@ void initSensor()
     Serial.println("Could not find a valid BME280 sensor, check wiring!");
     while (1);
   }
+}
+
+float getSnowAcc()
+{
+  long duration;
+  digitalWrite(trigPin, LOW);  // Added this line
+  delayMicroseconds(2); // Added this line
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10); // Added this line
+  digitalWrite(trigPin, LOW);
+  duration = pulseIn(echoPin, HIGH);
+  Serial.println(duration);
+  float soundSpeed;
+  //float temperature = 25; // in grade celsius
+  soundSpeed = 20.05*sqrt(temperature + 273.15); // metri pe sec
+  
+  float distance = (duration*soundSpeed/2)/10000; // in cm * 
+  snowAcc = MOUNT_DISTANCE - distance;
 }
 
 float getTemperature()
@@ -94,7 +120,9 @@ void getWeatherData() //client function to send/receive GET request data.
     //  String url = "/api/t/1/"+String(temperature); // send temperature
     //  String url = "/api/p/1/"+String(pressure); // send pressure
     //  String url = "/api/u/1/"+String(humidity); // send humidity
-    String url = "/api/a/1/"+String(temperature)+ "/" + String(pressure) + "/" + String(humidity);
+    //  String url = "/api/s/1/"+String(snowAcc); // send snow accumulation
+    String url = "/api/a/1/"+String(temperature)+ "/" + String(pressure) + "/" + String(humidity)+ "/" + String(snowAcc);
+    
        // This will send the request to the server
     client.print(String("GET ") + url + " HTTP/1.1\r\n" +
                  "Host: " + servername + "\r\n" +
