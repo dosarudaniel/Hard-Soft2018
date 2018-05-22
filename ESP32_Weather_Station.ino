@@ -1,10 +1,3 @@
-    /////////////////////////////////////////////////////////////////
-   //         ESP32 Weather Station Project     v1.00             //
-  //       Get the latest version of the code here:              //
- //         http://educ8s.tv/esp32-weather-station              //
-/////////////////////////////////////////////////////////////////
-
-
 #define ARDUINOJSON_ENABLE_PROGMEM 0
 
 #include "Adafruit_BME280.h" //https://github.com/Takatsuki0204/BME280-I2C-ESP32
@@ -13,9 +6,8 @@
 
 const char* ssid     = "House MD";
 const char* password = "aspire2inspire";
-String CityID = "253394"; //Sparta, Greece
-String APIKEY = "yourAPIkey";
-#define ALTITUDE 216.0 // Altitude in Sparta, Greece
+
+#define ALTITUDE 325.0 // Altitude in Suceava, Romania
 
 #define I2C_SDA 27
 #define I2C_SCL 26
@@ -40,30 +32,23 @@ float Temperature;
 void setup() 
 {
   Serial.begin(9600);
-
   initSensor();
-
   connectToWifi();
 }
 
 void loop() {
  getTemperature();
- 
  getHumidity();
- 
  getPressure();
- getWeatherData();
- delay(2000);
+ getWeatherData(); // send data to server using GET
+ delay(2000);      // change this to change "sample rate"
 }
 
 void connectToWifi()
 {
   WiFi.enableSTA(true);
-  
   delay(2000);
-
   WiFi.begin(ssid, password);
-  
   while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
