@@ -14,6 +14,10 @@
 #define SOIL_HUMIDITY_MODULE_PORT A0
 #define trigPin 23
 #define echoPin 22
+#define trigPin1 9
+#define echoPin1 10
+#define trigPin2 5
+#define echoPin2 6
 
 #define ALTITUDE 325.0 // Altitude in Suceava, Romania
 #define MOUNT_DISTANCE 14.50 // in cm, max 400cm, min 5cm for snowAcc
@@ -27,6 +31,8 @@ float pressure = 0;
 float snowAcc = 0;
 int soil_hum = 0;
 int weatherID = 0;
+
+long duration1, duration2;
 
 Adafruit_BME280 bme(I2C_SDA, I2C_SCL);
 
@@ -51,6 +57,7 @@ void loop() {
  getPressure();
  getSnowAcc();
  getSoilHumidity();
+ getWind();
  getWeatherData(); // send data to server using GET
  delay(2000);      // change this to change "sample rate"
 }
@@ -74,12 +81,20 @@ void initSensor()
     while (1);
   }
   initSnow();
+  initWind();
 }
 
 void initSnow()
 {
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
+}
+
+void initWind() {
+  pinMode(trigPin1, OUTPUT);
+  pinMode(echoPin1, INPUT);
+  pinMode(trigPin2, OUTPUT);
+  pinMode(echoPin2, INPUT);
 }
 
 float getSnowAcc()
@@ -123,6 +138,30 @@ int getSoilHumidity() {
     soil_hum = soil_hum * 100 / MAX_12BITS;
 }
 
+void getWind() {
+  // N-S
+  digitalWrite(trigPin1, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin1, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin1, LOW);
+  duration1 = pulseIn(echoPin1, HIGH);
+  // W-E
+  digitalWrite(trigPin2, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin2, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin2, LOW);
+  duration2 = pulseIn(echoPin2, HIGH);
+  // show results
+  Serial.print(duration1);
+  Serial.print(" ");
+  Serial.print(duration2);
+  Serial.println();
+  
+  //delay(500);
+}
+
 void getWeatherData() //client function to send/receive GET request data.
 {
   String result ="";
@@ -137,7 +176,8 @@ void getWeatherData() //client function to send/receive GET request data.
     //  String url = "/api/p/1/"+String(pressure); // send pressure
     //  String url = "/api/u/1/"+String(humidity); // send humidity
     //  String url = "/api/s/1/"+String(snowAcc); // send snow accumulation
-    // TODO:add soil humidity String url = "/api/?/l/"+String(soil_hum); // soil humidity
+    // TODO:add soil humidity String url = "/api/?/1/"+String(soil_hum); // soil humidity
+    // TODO: add wind(when its done)
     String url = "/api/a/1/"+String(temperature)+ "/" + String(pressure) + "/" + String(humidity)+ "/" + String(snowAcc);
     
        // This will send the request to the server
