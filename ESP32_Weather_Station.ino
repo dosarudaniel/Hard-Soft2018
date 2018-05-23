@@ -19,7 +19,7 @@
 #define trigPin2 5
 #define echoPin2 6
 
-#define ALTITUDE 325.0 // Altitude in Suceava, Romania
+//#define ALTITUDE 325.0 // Altitude in Suceava, Romania
 #define MOUNT_DISTANCE 14.50 // in cm, max 400cm, min 5cm for snowAcc
 
 const char* ssid     = "House MD";
@@ -32,7 +32,7 @@ float snowAcc = 0;
 int soil_hum = 0;
 int weatherID = 0;
 
-long duration1, duration2;
+long duration, duration1, duration2, cm;
 
 Adafruit_BME280 bme(I2C_SDA, I2C_SCL);
 
@@ -57,7 +57,7 @@ void loop() {
  getPressure();
  getSnowAcc();
  getSoilHumidity();
- getWind();
+ //getWind();
  getWeatherData(); // send data to server using GET
  delay(2000);      // change this to change "sample rate"
 }
@@ -81,7 +81,7 @@ void initSensor()
     while (1);
   }
   initSnow();
-  initWind();
+  //initWind();
 }
 
 void initSnow()
@@ -99,19 +99,15 @@ void initWind() {
 
 float getSnowAcc()
 {
-  long duration;
   digitalWrite(trigPin, LOW);  // Added this line
-  delayMicroseconds(2); // Added this line
+  delayMicroseconds(5); // Added this line
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10); // Added this line
   digitalWrite(trigPin, LOW);
   duration = pulseIn(echoPin, HIGH);
   Serial.println(duration);
-  float soundSpeed;
-  //float temperature = 25; // in grade celsius
-  soundSpeed = 20.05*sqrt(temperature + 273.15); // metri pe sec
   
-  float distance = (duration*soundSpeed/2)/10000; // in cm * 
+  float distance = (duration/2)/29.1;
   snowAcc = MOUNT_DISTANCE - distance;
 }
 
@@ -128,7 +124,7 @@ float getHumidity()
 float getPressure()
 {
   pressure = bme.readPressure();
-  pressure = bme.seaLevelForAltitude(ALTITUDE,pressure);
+  //pressure = bme.seaLevelForAltitude(ALTITUDE,pressure);
   pressure = pressure/100.0F;
 }
 
@@ -141,7 +137,7 @@ int getSoilHumidity() {
 void getWind() {
   // N-S
   digitalWrite(trigPin1, LOW);
-  delayMicroseconds(2);
+  delayMicroseconds(5);
   digitalWrite(trigPin1, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin1, LOW);
