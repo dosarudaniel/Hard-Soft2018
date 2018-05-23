@@ -14,10 +14,10 @@
 #define SOIL_HUMIDITY_MODULE_PORT A0
 #define trigPin 2  // zapada
 #define echoPin 5  // zapada
-#define trigPin1 9
-#define echoPin1 10
-#define trigPin2 5
-#define echoPin2 6
+#define trigPin1 34
+#define echoPin1 35
+#define trigPin2 32
+#define echoPin2 33
 
 #define ALTITUDE 325.0 // Altitude in Suceava, Romania
 #define MOUNT_DISTANCE 14.50 // in cm, max 400cm, min 5cm for snowAcc
