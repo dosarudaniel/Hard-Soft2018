@@ -12,14 +12,14 @@
 #define LED_PIN 2
 #define BME280_ADDRESS 0x76  //If the sensor does not work, try the 0x77 address as well
 #define SOIL_HUMIDITY_MODULE_PORT A0
-#define trigPin 23
-#define echoPin 22
+#define trigPin 2  // zapada
+#define echoPin 5  // zapada
 #define trigPin1 9
 #define echoPin1 10
 #define trigPin2 5
 #define echoPin2 6
 
-//#define ALTITUDE 325.0 // Altitude in Suceava, Romania
+#define ALTITUDE 325.0 // Altitude in Suceava, Romania
 #define MOUNT_DISTANCE 14.50 // in cm, max 400cm, min 5cm for snowAcc
 
 const char* ssid     = "House MD";
@@ -32,7 +32,7 @@ float snowAcc = 0;
 int soil_hum = 0;
 int weatherID = 0;
 
-long duration, duration1, duration2, cm;
+long duration, duration1, duration2, aux;
 
 Adafruit_BME280 bme(I2C_SDA, I2C_SCL);
 
@@ -44,7 +44,7 @@ String weatherDescription ="";
 String weatherLocation = "";
 float Temperature;
 
-void setup() 
+void setup()
 {
   Serial.begin(9600);
   initSensor();
@@ -81,7 +81,7 @@ void initSensor()
     while (1);
   }
   initSnow();
-  //initWind();
+ // initWind();
 }
 
 void initSnow()
@@ -97,18 +97,31 @@ void initWind() {
   pinMode(echoPin2, INPUT);
 }
 
-float getSnowAcc()
+void getSnowAcc()
 {
-  digitalWrite(trigPin, LOW);  // Added this line
-  delayMicroseconds(5); // Added this line
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10); // Added this line
   digitalWrite(trigPin, LOW);
-  duration = pulseIn(echoPin, HIGH);
-  Serial.println(duration);
+    delayMicroseconds(2);
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
+
+    // Read the signal from the sensor: a HIGH pulse whose
+    // duration is the time (in microseconds) from the sending
+    // of the ping to the reception of its echo off of an object.
+    //pinMode(echoPin, INPUT);
+    duration = pulseIn(echoPin, HIGH);
   
-  float distance = (duration/2)/29.1;
-  snowAcc = MOUNT_DISTANCE - distance;
+    // convert the time into a distance
+    aux = duration* 0.017;
+    Serial.print("durata ");
+    Serial.print(duration);
+    Serial.print(" ");
+    Serial.print(aux);
+    Serial.print(" cm");
+    Serial.println();
+
+    delay(250);
+    snowAcc = MOUNT_DISTANCE - aux;
 }
 
 float getTemperature()
@@ -124,7 +137,7 @@ float getHumidity()
 float getPressure()
 {
   pressure = bme.readPressure();
-  //pressure = bme.seaLevelForAltitude(ALTITUDE,pressure);
+  pressure = bme.seaLevelForAltitude(ALTITUDE,pressure);
   pressure = pressure/100.0F;
 }
 
@@ -137,7 +150,7 @@ int getSoilHumidity() {
 void getWind() {
   // N-S
   digitalWrite(trigPin1, LOW);
-  delayMicroseconds(5);
+  delayMicroseconds(2);
   digitalWrite(trigPin1, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin1, LOW);
@@ -154,7 +167,7 @@ void getWind() {
   Serial.print(" ");
   Serial.print(duration2);
   Serial.println();
-  
+
   //delay(500);
 }
 
@@ -175,7 +188,7 @@ void getWeatherData() //client function to send/receive GET request data.
     // TODO:add soil humidity String url = "/api/?/1/"+String(soil_hum); // soil humidity
     // TODO: add wind(when its done)
     String url = "/api/a/1/"+String(temperature)+ "/" + String(pressure) + "/" + String(humidity)+ "/" + String(snowAcc);
-    
+
        // This will send the request to the server
     client.print(String("GET ") + url + " HTTP/1.1\r\n" +
                  "Host: " + servername + "\r\n" +
