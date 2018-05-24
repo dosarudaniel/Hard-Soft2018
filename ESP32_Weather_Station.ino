@@ -4,6 +4,7 @@
 #include <ArduinoJson.h>    //https://github.com/bblanchon/ArduinoJson
 #include <WiFi.h>
 #include <math.h>
+//#include <BluetoothSerial.h>
 
 #define MAX_12BITS 4095
 
@@ -12,12 +13,13 @@
 #define LED_PIN 2
 #define BME280_ADDRESS 0x76  //If the sensor does not work, try the 0x77 address as well
 #define SOIL_HUMIDITY_MODULE_PORT A0
-#define trigPin 2  // zapada
-#define echoPin 5  // zapada
+#define trigPin 2     // snow
+#define echoPin 5     // snow
 #define trigPin1 34
 #define echoPin1 35
 #define trigPin2 32
 #define echoPin2 33
+#define GAS_MODULE_PORT A3
 
 #define ALTITUDE 325.0 // Altitude in Suceava, Romania
 #define MOUNT_DISTANCE 14.50 // in cm, max 400cm, min 5cm for snowAcc
@@ -30,13 +32,16 @@ float humidity = 0;
 float pressure = 0;
 float snowAcc = 0;
 int soil_hum = 0;
+float gas_value = 0;
 int weatherID = 0;
 
 long duration, duration1, duration2, aux;
 
 Adafruit_BME280 bme(I2C_SDA, I2C_SCL);
 
-WiFiClient client;
+//BluetoothSerial SerialBT;
+
+//WiFiClient client;
 char* servername ="54.149.135.147";  // remote server we will connect to
 String result;
 
@@ -47,6 +52,7 @@ float Temperature;
 void setup()
 {
   Serial.begin(9600);
+  //SerialBT.begin("B_ESP32");
   initSensor();
   connectToWifi();
 }
@@ -58,6 +64,7 @@ void loop() {
  getSnowAcc();
  getSoilHumidity();
  //getWind();
+ getGas();
  getWeatherData(); // send data to server using GET
  delay(2000);      // change this to change "sample rate"
 }
@@ -68,24 +75,27 @@ void connectToWifi()
   delay(2000);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
+    delay(500);
+    Serial.print(".");
+  }
 }
 
 void initSensor()
 {
-  bool status = bme.begin(BME280_ADDRESS);
+  bool status;
+  while(1) {
+    status = bme.begin(BME280_ADDRESS);
   if (!status) {
     Serial.println("Could not find a valid BME280 sensor, check wiring!");
-    while (1);
+  } else break;
+  delay(2000);
   }
   initSnow();
  // initWind();
+ pinMode(GAS_MODULE_PORT, INPUT); //Set gas sensor as input
 }
 
-void initSnow()
-{
+void initSnow() {
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
 }
@@ -97,54 +107,47 @@ void initWind() {
   pinMode(echoPin2, INPUT);
 }
 
-void getSnowAcc()
-{
+void getSnowAcc() {
   digitalWrite(trigPin, LOW);
-    delayMicroseconds(2);
-    digitalWrite(trigPin, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
 
-    // Read the signal from the sensor: a HIGH pulse whose
-    // duration is the time (in microseconds) from the sending
-    // of the ping to the reception of its echo off of an object.
-    //pinMode(echoPin, INPUT);
-    duration = pulseIn(echoPin, HIGH);
-  
-    // convert the time into a distance
-    aux = duration* 0.017;
-    Serial.print("durata ");
-    Serial.print(duration);
-    Serial.print(" ");
-    Serial.print(aux);
-    Serial.print(" cm");
-    Serial.println();
+  // Read the signal from the sensor: a HIGH pulse whose
+  // duration is the time (in microseconds) from the sending
+  // of the ping to the reception of its echo off of an object.
+  //pinMode(echoPin, INPUT);
+  duration = pulseIn(echoPin, HIGH);
 
-    delay(250);
-    snowAcc = MOUNT_DISTANCE - aux;
+  // convert the time into a distance
+  aux = duration* 0.017;
+
+  delay(250);
+  snowAcc = MOUNT_DISTANCE - aux;
 }
 
-float getTemperature()
-{
+float getTemperature() {
   temperature = bme.readTemperature();
 }
 
-float getHumidity()
-{
+float getHumidity() {
   humidity = bme.readHumidity();
 }
 
-float getPressure()
-{
+float getPressure() {
   pressure = bme.readPressure();
-  pressure = bme.seaLevelForAltitude(ALTITUDE,pressure);
   pressure = pressure/100.0F;
 }
 
 int getSoilHumidity() {
-    soil_hum = analogRead(SOIL_HUMIDITY_MODULE_PORT);
-    soil_hum = MAX_12BITS - soil_hum;
-    soil_hum = soil_hum * 100 / MAX_12BITS;
+  soil_hum = analogRead(SOIL_HUMIDITY_MODULE_PORT);
+  soil_hum = MAX_12BITS - soil_hum;
+  soil_hum = soil_hum * 100 / MAX_12BITS;
+}
+
+float getGas() {
+  gas_value = analogRead(GAS_MODULE_PORT);
 }
 
 void getWind() {
@@ -177,56 +180,56 @@ void getWeatherData() //client function to send/receive GET request data.
   WiFiClient client;
   const int httpPort = 80;
   if (!client.connect(servername, httpPort)) {
-        return;
+    return;
+  }
+    // We now create a URI for the request
+  //String url = "/data/2.5/forecast?id="+CityID+"&units=metric&cnt=1&APPID="+APIKEY;
+  //  String url = "/api/t/1/"+String(temperature); // send temperature
+  //  String url = "/api/p/1/"+String(pressure); // send pressure
+  //  String url = "/api/u/1/"+String(humidity); // send humidity
+  //  String url = "/api/s/1/"+String(snowAcc); // send snow accumulation
+  // TODO:add soil humidity String url = "/api/?/1/"+String(soil_hum); // soil humidity
+  // TODO: add wind(when its done)
+  String url = "/api/a/1/"+String(temperature)+ "/" + String(pressure) + "/" + String(humidity)+ "/" + String(snowAcc);
+
+  // This will send the request to the server
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + servername + "\r\n" +
+               "Connection: close\r\n\r\n");
+  //SerialBT.println(url);
+  unsigned long timeout = millis();
+  while (client.available() == 0) {
+    if (millis() - timeout > 5000) {
+      client.stop();
+      return;
     }
-      // We now create a URI for the request
-    //String url = "/data/2.5/forecast?id="+CityID+"&units=metric&cnt=1&APPID="+APIKEY;
-    //  String url = "/api/t/1/"+String(temperature); // send temperature
-    //  String url = "/api/p/1/"+String(pressure); // send pressure
-    //  String url = "/api/u/1/"+String(humidity); // send humidity
-    //  String url = "/api/s/1/"+String(snowAcc); // send snow accumulation
-    // TODO:add soil humidity String url = "/api/?/1/"+String(soil_hum); // soil humidity
-    // TODO: add wind(when its done)
-    String url = "/api/a/1/"+String(temperature)+ "/" + String(pressure) + "/" + String(humidity)+ "/" + String(snowAcc);
+  }
 
-       // This will send the request to the server
-    client.print(String("GET ") + url + " HTTP/1.1\r\n" +
-                 "Host: " + servername + "\r\n" +
-                 "Connection: close\r\n\r\n");
-    unsigned long timeout = millis();
-    while (client.available() == 0) {
-        if (millis() - timeout > 5000) {
-            client.stop();
-            return;
-        }
-    }
+  // Read all the lines of the reply from server
+  while(client.available()) {
+      result = client.readStringUntil('\r');
+  }
 
-    // Read all the lines of the reply from server
-    while(client.available()) {
-        result = client.readStringUntil('\r');
-    }
-
-result.replace('[', ' ');
-result.replace(']', ' ');
-
-char jsonArray [result.length()+1];
-result.toCharArray(jsonArray,sizeof(jsonArray));
-jsonArray[result.length() + 1] = '\0';
-
-StaticJsonBuffer<1024> json_buf;
-JsonObject &root = json_buf.parseObject(jsonArray);
-if (!root.success())
-{
-  Serial.println("parseObject() failed");
-}
-
-String location = root["city"]["name"];
-String temperature = root["list"]["main"]["temp"];
-String weather = root["list"]["weather"]["main"];
-String description = root["list"]["weather"]["description"];
-String idString = root["list"]["weather"]["id"];
-String timeS = root["list"]["dt_txt"];
-
-weatherID = idString.toInt();
-Serial.println (url);
+  result.replace('[', ' ');
+  result.replace(']', ' ');
+  
+  char jsonArray [result.length()+1];
+  result.toCharArray(jsonArray,sizeof(jsonArray));
+  jsonArray[result.length() + 1] = '\0';
+  
+  StaticJsonBuffer<1024> json_buf;
+  JsonObject &root = json_buf.parseObject(jsonArray);
+  if (!root.success()) {
+    Serial.println("parseObject() failed");
+  }
+  
+  String location = root["city"]["name"];
+  String temperature = root["list"]["main"]["temp"];
+  String weather = root["list"]["weather"]["main"];
+  String description = root["list"]["weather"]["description"];
+  String idString = root["list"]["weather"]["id"];
+  String timeS = root["list"]["dt_txt"];
+  
+  weatherID = idString.toInt();
+  Serial.println(url);
 }
