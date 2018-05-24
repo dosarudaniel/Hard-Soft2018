@@ -50,9 +50,9 @@ char* servername ="54.149.135.147";  // remote server we will connect to
 String result;
 
 // sensorsValues
-float temperature = 0;
-float humidity = 0;
-float pressure = 0;
+float temperature = 23;
+float humidity = 40;
+float pressure = 1010;
 float snowAcc = 0;
 int soil_hum = 0;
 float gas_value = 0;
@@ -286,15 +286,22 @@ void getWeatherData() //client function to send/receive GET request data.
     return;
   }
     // We now create a URI for the request
-  //String url = "/data/2.5/forecast?id="+CityID+"&units=metric&cnt=1&APPID="+APIKEY;
-  //  String url = "/api/t/1/"+String(temperature); // send temperature
-  //  String url = "/api/p/1/"+String(pressure); // send pressure
-  //  String url = "/api/u/1/"+String(humidity); // send humidity
-  //  String url = "/api/s/1/"+String(snowAcc); // send snow accumulation
-  // TODO:add soil humidity String url = "/api/?/1/"+String(soil_hum); // soil humidity
-  // TODO: add wind(when its done)
-  // String url = "/api/a/1/"+String(temperature)+ "/" + String(pressure) + "/" + String(humidity)+ "/" + String(snowAcc);
-  String url = "/api/w/1/" + String(windSpeed) + "/" + String(windDirection);
+  // Format /api/a/:device/:t/:ha/:hs/:p/:pd/:ws/:wd/:s/:pollution/:rain/:battery/:charging
+  String url = "/api/a/";
+  url += String(1) + "/";             // device
+  url += String(temperature)+ "/";
+  url += String(humidity) + "/";
+  url += String(soil_hum) + "/"; 
+  url += String(pressure) + "/";
+  url += String(0) + "/";
+  url += String(windSpeed) + "/";
+  url += String(windDirection) + "/";
+  url += String(snowAcc) + "/";
+  url += String(0) + "/";
+  url += String(0) + "/";
+  url += String(96) + "/";
+  url += String(100);
+  
   // This will send the request to the server
   client.print(String("GET ") + url + " HTTP/1.1\r\n" +
                "Host: " + servername + "\r\n" +
