@@ -13,6 +13,7 @@
 #define LED_PIN 2
 #define BME280_ADDRESS 0x76  //If the sensor does not work, try the 0x77 address as well
 #define SOIL_HUMIDITY_MODULE_PORT A0
+#define RAIN 15
 #define trigPin 2     // snow
 #define echoPin 5     // snow
 
@@ -22,7 +23,7 @@
 #define MOUNT_DISTANCE 14.50 // in cm, max 400cm, min 5cm for snowAcc
 
 // For wind: 1:N->S ; 2: W->E, please connect HCSR04 to the following pins
-#define trigPin1 14 // 
+#define trigPin1 14 //
 #define echoPin1 12
 #define trigPin2 32
 #define echoPin2 33
@@ -56,6 +57,7 @@ float pressure = 1010;
 float snowAcc = 0;
 int soil_hum = 0;
 float gas_value = 0;
+int raining = 0;
 int weatherID = 0;
 
 long duration, aux;
@@ -84,6 +86,7 @@ void loop() {
  getSoilHumidity();
  getWind();
  getGas();
+ isRaining();
  getWeatherData(); // send data to server using GET
  delay(2000);      // change this to change "sample rate"
 }
@@ -112,6 +115,7 @@ void initSensor()
   initSnow();
   initWind();
   pinMode(GAS_MODULE_PORT, INPUT); //Set gas sensor as input
+  pinMode(RAIN, INPUT);
 }
 
 void initSnow() {
@@ -124,7 +128,7 @@ void initWind() {
   pinMode(echoPin1, INPUT);
   pinMode(trigPin2, OUTPUT);
   pinMode(echoPin2, INPUT);
-  
+
   for (int i = 0; i < NR_TESTS; i++) {
       digitalWrite(trigPin1, LOW);
       delayMicroseconds(2);
@@ -133,7 +137,7 @@ void initWind() {
       digitalWrite(trigPin1, LOW);
       duration1 = pulseIn(echoPin1, HIGH);
       dur1[i] = duration1;
-    
+
       digitalWrite(trigPin2, LOW);
       delayMicroseconds(2);
       digitalWrite(trigPin2, HIGH);
@@ -145,7 +149,7 @@ void initWind() {
   // calculate average
   float sum1 = 0;
   float sum2 = 0;
-  
+
   for (int i = 0; i < NR_TESTS; i++) {
      sum1 += dur1[i];
      sum2 += dur2[i];
@@ -197,6 +201,10 @@ float getGas() {
   gas_value = analogRead(GAS_MODULE_PORT);
 }
 
+int isRaining() {
+  raining = 100-digitalRead(RAIN)*100; // logica inversata
+}
+
 void getWind() {
   windSpeed = 0.0;
   // take measurements
@@ -208,7 +216,7 @@ void getWind() {
       digitalWrite(trigPin1, LOW);
       duration1 = pulseIn(echoPin1, HIGH);
       dur1[i] = duration1;
-    
+
       digitalWrite(trigPin2, LOW);
       delayMicroseconds(2);
       digitalWrite(trigPin2, HIGH);
@@ -220,7 +228,7 @@ void getWind() {
   // calculate average
   float sum1 = 0;
   float sum2 = 0;
-  
+
   for (int i = 0; i < NR_TESTS; i++) {
      sum1 += dur1[i];
      sum2 += dur2[i];
@@ -236,7 +244,7 @@ void getWind() {
               ^
               |
               |
-              | 
+              |
   V(TX) ---------------------> E (RX)
               |
               |
@@ -244,11 +252,11 @@ void getWind() {
               |
               S (RX)
   */
-  
+
   double rad = atan2 (dif1, dif2); // The returned value is in the range [-pi, +pi]
   // pi/2 means North a.k.a windDirection 0
   // pi   means West  a.k.a windDirection 270
-  
+
   if (rad <= M_PI/2 && rad > 0) { // Cadran 1
     rad = M_PI/2 - rad;
   } else if (rad <= 0 && rad > -M_PI/2 ){  // Cadran 4
@@ -260,16 +268,16 @@ void getWind() {
   }
 
   float degrees = 180*rad/M_PI;
-  
+
   dif1 = abs(dif1 - SENSITIVITY);
   dif2 = abs(dif2 - SENSITIVITY);
   windSpeed = sqrt(dif1*dif1 + dif2*dif2);
   // final values!!
   windSpeed = windSpeed/100; // Calibration..
   windDirection = (int) degrees;
-  
+
   Serial.println("--------> windSpeed =  " + String(windSpeed) + " direction " +String(windDirection));
-  
+
 //  Serial.print(avg1);
 //  Serial.print(" ");
 //  Serial.print(avg2);
@@ -291,17 +299,17 @@ void getWeatherData() //client function to send/receive GET request data.
   url += String(1) + "/";             // device
   url += String(temperature)+ "/";
   url += String(humidity) + "/";
-  url += String(soil_hum) + "/"; 
+  url += String(soil_hum) + "/";
   url += String(pressure) + "/";
   url += String(0) + "/";
   url += String(windSpeed) + "/";
   url += String(windDirection) + "/";
   url += String(snowAcc) + "/";
   url += String(0) + "/";
-  url += String(0) + "/";
+  url += String(raining) + "/";
   url += String(96) + "/";
   url += String(100);
-  
+
   // This will send the request to the server
   client.print(String("GET ") + url + " HTTP/1.1\r\n" +
                "Host: " + servername + "\r\n" +
@@ -322,24 +330,24 @@ void getWeatherData() //client function to send/receive GET request data.
 
   result.replace('[', ' ');
   result.replace(']', ' ');
-  
+
   char jsonArray [result.length()+1];
   result.toCharArray(jsonArray,sizeof(jsonArray));
   jsonArray[result.length() + 1] = '\0';
-  
+
   StaticJsonBuffer<1024> json_buf;
   JsonObject &root = json_buf.parseObject(jsonArray);
   if (!root.success()) {
     Serial.println("parseObject() failed");
   }
-  
+
   String location = root["city"]["name"];
   String temperature = root["list"]["main"]["temp"];
   String weather = root["list"]["weather"]["main"];
   String description = root["list"]["weather"]["description"];
   String idString = root["list"]["weather"]["id"];
   String timeS = root["list"]["dt_txt"];
-  
+
   weatherID = idString.toInt();
   Serial.println(url);
 }
